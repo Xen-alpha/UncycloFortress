@@ -26,6 +26,7 @@ class Projectile extends GameObject {
 const MAX_PROJECTILE_PER_PLAYER = 100;
 const MAX_PROJECTILE_NUMBER = 100 * MAX_PROJECTILE_PER_PLAYER;
 let projectilelist = [];
+let playerlist = [];
 class Player extends GameObject {
 	constructor(pos, size, direction, team, health, id = 0, isdead = false, playername = "unknown player" , classnum = 0) {
 		super(pos, size, direction, team, 1, 0, health);
@@ -417,22 +418,12 @@ function connectHandler(conn) {
 		// check script version
 		conn.send(JSON.stringify({type: 21}));
 		// send every player list to connected player
-		let playerlistarray = [];
 		for (let client of clients) {
-			playerlistarray.push({
-				id: client.playerinfo.playerID,
-				pos: client.playerinfo.pos,
-				direction: client.playerinfo.direction,
-				team: client.playerinfo.team,
-				health: client.playerinfo.healthpoint,
-				playername: client.playerinfo.playername,
-				classnumber: client.playerinfo.classnumber,
-				isdead: client.playerinfo.isdead
-			});
+			playerlist.push(client.playerinfo);
 		}
 		conn.send(JSON.stringify({
 			type: 0,
-			playerlist: playerlistarray
+			playerlist: playerlist
 		}));
 		// say everyone that a player is connected
 		broadcast(JSON.stringify({type:1,
@@ -720,10 +711,6 @@ function messageHandler(message) {
 			for (let ray of messageinfo.raylist) {
 				let realray = new Ray (ray.startpos, ray.endpos);
 				realray.AddPenetratingObjects(mapinfo.mapobjectlist);
-				let playerlist = [];
-				for (let client of clients) {
-					playerlist.push(client.playerinfo);
-				}
 				realray.AddPenetratingObjects(playerlist);
 				let collidedObject = realray.GetClosestCollidedObject(messageinfo.id);
 				if (collidedObject != undefined && collidedObject.constructor == Player) { // collided to player
@@ -755,6 +742,7 @@ function messageHandler(message) {
 								killtype = 0; // only killed by shooting pistol
 								break;
 							default:
+								killtype = -1; // default kill type
 								break;
 						}
 						broadcast(JSON.stringify({
